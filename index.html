@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ERC-8312 · Bounded Agent Actions</title>
+<meta name="description" content="ERC-8312 defines a standard interface for on-chain envelopes that bind agent intent to a verifiable state cursor across calls and across protocols." />
+<meta property="og:title" content="ERC-8312 · Bounded Agent Actions" />
+<meta property="og:description" content="On-chain records that bind agent intent to a verifiable state cursor across calls and across protocols." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script>
+  // Set theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    try {
+      var saved = localStorage.getItem('erc8312-theme');
+      var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      var theme = saved || (prefersLight ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --bg-2: #10141c;
+    --panel: #131926;
+    --panel-2: #171e2e;
+    --border: #232c3d;
+    --border-2: #2c3750;
+    --text: #e6ebf4;
+    --muted: #97a3b8;
+    --faint: #6b788f;
+    --accent: #7c8cff;
+    --accent-2: #4ad9c4;
+    --accent-warm: #ffb454;
+    --green: #4ade80;
+    --red: #f97066;
+    --violet: #a78bfa;
+    --nav-bg: rgba(11,14,20,0.72);
+    --glow-1: rgba(124,140,255,0.14);
+    --glow-2: rgba(74,217,196,0.08);
+    --shadow: rgba(0,0,0,.8);
+    --radius: 14px;
+    --maxw: 1080px;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f6f8fc;
+    --bg-2: #eef2f8;
+    --panel: #ffffff;
+    --panel-2: #f4f7fb;
+    --border: #e4e9f2;
+    --border-2: #d3dbe9;
+    --text: #101828;
+    --muted: #4a566b;
+    --faint: #7a879c;
+    --accent: #4f5bd5;
+    --accent-2: #0d9488;
+    --accent-warm: #b26a00;
+    --green: #16a34a;
+    --red: #dc2626;
+    --violet: #7c3aed;
+    --nav-bg: rgba(246,248,252,0.82);
+    --glow-1: rgba(79,91,213,0.10);
+    --glow-2: rgba(13,148,136,0.07);
+    --shadow: rgba(23,42,80,.18);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background-color .3s ease, color .3s ease;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(900px 500px at 80% -10%, var(--glow-1), transparent 60%),
+      radial-gradient(800px 500px at 0% 5%, var(--glow-2), transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  a { color: inherit; text-decoration: none; }
+  h1, h2, h3, h4 { line-height: 1.2; letter-spacing: -0.02em; margin: 0; }
+  p { margin: 0 0 1rem; }
+  code, pre { font-family: var(--mono); }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* NAV */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    background: var(--nav-bg);
+    border-bottom: 1px solid var(--border);
+    transition: background-color .3s ease, border-color .3s ease;
+  }
+  .nav-inner { display: flex; align-items: center; gap: 24px; height: 64px; }
+  .nav-right { display: flex; align-items: center; gap: 22px; margin-left: auto; }
+  .theme-toggle {
+    display: inline-grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto;
+    border-radius: 10px; border: 1px solid var(--border-2); background: var(--panel);
+    color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 1;
+    transition: color .15s, border-color .15s, transform .12s, background .15s;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--accent); transform: translateY(-1px); }
+  .theme-toggle .ico-sun { display: none; }
+  .theme-toggle .ico-moon { display: inline; }
+  :root[data-theme="light"] .theme-toggle .ico-sun { display: inline; }
+  :root[data-theme="light"] .theme-toggle .ico-moon { display: none; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; }
+  .brand .dot {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center; font-size: 13px; color: #0b0e14; font-weight: 800;
+    font-family: var(--mono);
+  }
+  .brand small { color: var(--muted); font-weight: 500; font-size: .8rem; }
+  .nav-links { display: flex; gap: 22px; align-items: center; }
+  .nav-links a { color: var(--muted); font-size: .88rem; font-weight: 500; transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; border-radius: 10px; font-weight: 600; font-size: .88rem;
+    border: 1px solid var(--border-2); color: var(--text);
+    background: linear-gradient(180deg, rgba(124,140,255,0.16), rgba(124,140,255,0.06));
+    transition: transform .12s, border-color .15s, background .15s;
+    white-space: nowrap;
+  }
+  .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .btn.solid { background: linear-gradient(135deg, var(--accent), #6b7bff); border-color: transparent; color: #0b0e14; }
+  .btn.ghost { background: transparent; }
+  .nav-toggle { display: none; background: none; border: 1px solid var(--border-2); color: var(--text); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+
+  /* HERO */
+  .hero { padding: 92px 0 72px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: .78rem;
+    color: var(--accent-2); text-transform: uppercase; letter-spacing: .14em;
+    border: 1px solid var(--border-2); border-radius: 999px; padding: 6px 14px; margin-bottom: 26px;
+    background: var(--panel);
+  }
+  .eyebrow .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 12px var(--accent-2); }
+  .hero h1 { font-size: clamp(2.5rem, 6vw, 4.3rem); font-weight: 800; letter-spacing: -0.035em; max-width: 16ch; }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, var(--accent) 10%, var(--accent-2) 60%, var(--violet));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .lede { font-size: clamp(1.05rem, 2.2vw, 1.32rem); color: var(--muted); max-width: 58ch; margin-top: 22px; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 46px; color: var(--faint); font-size: .85rem; }
+  .meta-row .k { color: var(--muted); }
+  .meta-row b { color: var(--text); font-weight: 600; }
+  .badge-status {
+    color: var(--accent-warm); border: 1px solid rgba(255,180,84,.3); padding: 2px 10px; border-radius: 999px;
+    font-family: var(--mono); font-size: .74rem; letter-spacing: .06em;
+  }
+
+  /* SECTION scaffolding */
+  section { padding: 78px 0; position: relative; }
+  .section-head { max-width: 62ch; margin-bottom: 48px; }
+  .kicker { font-family: var(--mono); font-size: .78rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+  .section-head h2 { font-size: clamp(1.7rem, 3.6vw, 2.5rem); font-weight: 700; }
+  .section-head p { color: var(--muted); font-size: 1.08rem; margin-top: 16px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+  /* Zone / gap visual */
+  .zones { display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: stretch; margin-top: 10px; }
+  .zone {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px;
+  }
+  .zone h3 { font-size: 1.05rem; margin-bottom: 6px; }
+  .zone .tag { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .zone ul { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .zone li { color: var(--muted); font-size: .92rem; padding-left: 20px; position: relative; }
+  .zone li::before { content: ""; position: absolute; left: 0; top: .62em; width: 7px; height: 7px; border-radius: 2px; background: var(--accent); opacity: .7; }
+  .zone-mid { display: grid; place-items: center; text-align: center; gap: 8px; }
+  .zone-mid .arrow { color: var(--faint); font-size: 1.4rem; }
+  .zone-mid .env {
+    border: 1px dashed var(--border-2); border-radius: 12px; padding: 16px 14px; background: var(--panel-2);
+    font-family: var(--mono); font-size: .8rem; color: var(--accent-2); text-align: center;
+  }
+  .zone-mid .env b { display: block; color: var(--text); font-size: .95rem; margin-bottom: 4px; letter-spacing: -.01em; }
+
+  .callout {
+    margin-top: 28px; border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    background: var(--panel); border-radius: 10px; padding: 20px 22px; color: var(--muted);
+  }
+  .callout b { color: var(--text); }
+  .bigmath {
+    font-family: var(--mono); color: var(--text); font-size: 1.02rem;
+    display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .bigmath .from { color: var(--red); }
+  .bigmath .to { color: var(--green); }
+
+  /* Cards grid */
+  .grid { display: grid; gap: 18px; }
+  .grid.c2 { grid-template-columns: repeat(2, 1fr); }
+  .grid.c3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.c4 { grid-template-columns: repeat(4, 1fr); }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px;
+    transition: transform .15s, border-color .15s, background .15s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--border-2); background: var(--panel-2); }
+  .card .ico {
+    width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 16px;
+    background: linear-gradient(135deg, rgba(124,140,255,.18), rgba(74,217,196,.12));
+    border: 1px solid var(--border-2); font-family: var(--mono); font-weight: 600; color: var(--accent-2); font-size: 1rem;
+  }
+  .card h3 { font-size: 1.08rem; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: .93rem; margin: 0; }
+  .card .lead-num { font-family: var(--mono); color: var(--faint); font-size: .8rem; margin-bottom: 12px; }
+
+  /* Code block */
+  .codeblock {
+    background: #0a0d13; border: 1px solid #1c2433; border-radius: var(--radius); overflow: hidden;
+    box-shadow: 0 24px 60px -30px var(--shadow);
+  }
+  .code-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #1c2433; background: #0f1420; }
+  .code-head .dots { display: flex; gap: 6px; }
+  .code-head .dots span { width: 11px; height: 11px; border-radius: 50%; background: #2c3750; }
+  .code-head .fname { font-family: var(--mono); font-size: .78rem; color: #6b788f; margin-left: 6px; }
+  pre.code { margin: 0; padding: 22px 20px; overflow-x: auto; font-size: .82rem; line-height: 1.7; color: #cdd6e6; }
+  .code-split { display: grid; grid-template-columns: 1.1fr .9fr; gap: 24px; align-items: start; }
+  .tok-key { color: var(--violet); }
+  .tok-type { color: var(--accent-2); }
+  .tok-fn { color: var(--accent); }
+  .tok-com { color: var(--faint); font-style: italic; }
+  .tok-num { color: var(--accent-warm); }
+
+  .feature-list { display: grid; gap: 16px; }
+  .feature-list .fi { display: flex; gap: 14px; align-items: flex-start; }
+  .feature-list .fi .n { font-family: var(--mono); color: var(--accent); font-size: .82rem; border: 1px solid var(--border-2); border-radius: 8px; width: 30px; height: 30px; display: grid; place-items: center; flex: 0 0 auto; }
+  .feature-list .fi h4 { font-size: 1rem; margin-bottom: 3px; }
+  .feature-list .fi p { color: var(--muted); font-size: .9rem; margin: 0; }
+
+  /* Lifecycle state machine */
+  .lifecycle { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: center; margin-top: 8px; }
+  .state {
+    font-family: var(--mono); font-size: .85rem; padding: 9px 16px; border-radius: 999px;
+    border: 1px solid var(--border-2); background: var(--panel); color: var(--text);
+  }
+  .state.active { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px rgba(124,140,255,.25) inset; }
+  .state.terminal { color: var(--faint); }
+  .state.contested { border-color: var(--accent-warm); color: var(--accent-warm); }
+  .lc-arrow { color: var(--faint); font-family: var(--mono); }
+  .lc-legend { display: flex; gap: 20px; justify-content: center; margin-top: 26px; flex-wrap: wrap; color: var(--faint); font-size: .82rem; }
+  .lc-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 7px; vertical-align: middle; }
+
+  /* Composability chips */
+  .compo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .compo {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+    transition: border-color .15s, background .15s;
+  }
+  .compo:hover { border-color: var(--border-2); background: var(--panel-2); }
+  .compo .std { font-family: var(--mono); font-weight: 600; color: var(--accent-2); font-size: .92rem; }
+  .compo p { color: var(--muted); font-size: .86rem; margin: 8px 0 0; }
+  .compo .tier { font-size: .68rem; font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); float: right; }
+
+  /* Security list */
+  .sec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .sec { border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; background: var(--panel); }
+  .sec h4 { font-size: .98rem; margin-bottom: 7px; display: flex; align-items: center; gap: 9px; }
+  .sec h4 .m { font-family: var(--mono); font-size: .68rem; color: var(--red); border: 1px solid rgba(249,112,102,.35); border-radius: 6px; padding: 1px 7px; letter-spacing: .05em; }
+  .sec p { color: var(--muted); font-size: .88rem; margin: 0; }
+
+  /* CTA */
+  .cta {
+    text-align: center; border: 1px solid var(--border); border-radius: 22px; padding: 60px 30px;
+    background:
+      radial-gradient(600px 260px at 50% 0%, rgba(124,140,255,.16), transparent 70%),
+      var(--panel);
+  }
+  .cta h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700; }
+  .cta p { color: var(--muted); max-width: 52ch; margin: 16px auto 30px; font-size: 1.05rem; }
+  .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--border); padding: 44px 0 60px; margin-top: 40px; }
+  .foot-inner { display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-between; align-items: flex-start; }
+  .foot-brand { max-width: 34ch; }
+  .foot-brand p { color: var(--faint); font-size: .88rem; margin-top: 12px; }
+  .foot-cols { display: flex; gap: 60px; flex-wrap: wrap; }
+  .foot-col h5 { font-size: .78rem; text-transform: uppercase; letter-spacing: .12em; color: var(--faint); margin-bottom: 14px; font-weight: 600; }
+  .foot-col a { display: block; color: var(--muted); font-size: .9rem; margin-bottom: 10px; transition: color .15s; }
+  .foot-col a:hover { color: var(--text); }
+  .foot-bottom { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--faint); font-size: .82rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .nav-links.open {
+      display: flex; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column;
+      background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 18px 24px; gap: 16px; align-items: flex-start;
+    }
+    .nav-toggle { display: block; }
+    .zones { grid-template-columns: 1fr; }
+    .zone-mid .arrow { transform: rotate(90deg); }
+    .grid.c2, .grid.c3, .grid.c4, .compo-grid, .sec-grid { grid-template-columns: 1fr; }
+    .code-split { grid-template-columns: 1fr; }
+  }
+  @media (min-width: 901px) and (max-width: 1024px) {
+    .grid.c4 { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top">
+      <span class="dot">◈</span>
+      <span>ERC-8312</span>
+    </a>
+    <div class="nav-right">
+      <nav class="nav-links" id="navlinks">
+        <a href="#problem">Problem</a>
+        <a href="#solution">Solution</a>
+        <a href="#concepts">Concepts</a>
+        <a href="#interface">Interface</a>
+        <a href="#lifecycle">Lifecycle</a>
+        <a href="#composability">Composability</a>
+        <a href="#security">Security</a>
+        <a class="btn" href="https://ethereum-magicians.org/t/erc-8312-bounded-agent-actions/28851" target="_blank" rel="noopener">Read the spec →</a>
+      </nav>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme" title="Toggle theme">
+        <span class="ico-sun">☀</span><span class="ico-moon">☾</span>
+      </button>
+      <button class="nav-toggle" aria-label="Menu" onclick="document.getElementById('navlinks').classList.toggle('open')">☰</button>
+    </div>
+  </div>
+</header>
+
+<div id="top"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow"><span class="pip"></span> ERC-8312 · Standards Track · ERC</span>
+    <h1>Bind agent intent to a <span class="grad">verifiable state cursor</span>, across every call.</h1>
+    <p class="lede">
+      A standard interface for on-chain <b>envelopes</b> — records that meter the authority an
+      autonomous agent consumes across many actions and across protocols, not just one call at a time.
+    </p>
+    <div class="hero-cta">
+      <a class="btn solid" href="https://ethereum-magicians.org/t/erc-8312-bounded-agent-actions/28851" target="_blank" rel="noopener">Read the specification →</a>
+      <a class="btn ghost" href="#interface">View the interface</a>
+      <a class="btn ghost" href="https://github.com/Atlas-Protocol-AI/bounded-agent-actions" target="_blank" rel="noopener">Reference implementation ↗</a>
+    </div>
+    <div class="meta-row">
+      <span class="k">Status <span class="badge-status">DRAFT</span></span>
+      <span class="k">Created <b>2026-05-09</b></span>
+      <span class="k">Requires <b>ERC-165</b></span>
+      <span class="k">Authors <b>Matthias Hauser</b> (@0x2kNJ), <b>Simon Brown</b> (@orbmis)</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">The Problem</div>
+      <h2>No shared object binds later actions to aggregate protocol state.</h2>
+      <p>
+        Ethereum has rich standards for <em>authorization</em> upstream and for <em>invariant-maintaining
+        contracts</em> downstream. Between them sits a gap: nothing carries an agent's cumulative bound
+        from one protocol to the next after authorization has completed.
+      </p>
+    </div>
+
+    <div class="zones">
+      <div class="zone">
+        <span class="tag">Upstream zone</span>
+        <h3>Authorization &amp; routing</h3>
+        <ul>
+          <li>ERC-4337 — how a UserOperation reaches the chain</li>
+          <li>ERC-7579 — how a modular smart account composes modules</li>
+          <li>ERC-7710 — how a delegation is structured and redeemed</li>
+          <li>ERC-7715 — how a dApp requests a scoped permission</li>
+          <li>ERC-8211 — how operations are composed and batched</li>
+        </ul>
+      </div>
+
+      <div class="zone zone-mid">
+        <span class="arrow">→</span>
+        <div class="env">
+          <b>Envelope</b>
+          principal · capabilityRoot<br/>cursor · expiry · status
+        </div>
+        <span class="arrow">→</span>
+      </div>
+
+      <div class="zone">
+        <span class="tag">Downstream zone</span>
+        <h3>Invariant-maintaining contracts</h3>
+        <ul>
+          <li>A remaining budget across protocols</li>
+          <li>An identity binding that must hold</li>
+          <li>A reputation score updated over time</li>
+          <li>A privacy commitment or nullifier set</li>
+          <li>A dispute or contestation state</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p style="margin:0 0 14px"><b>Without a shared primitive</b>, every upstream system needs bespoke integration with every downstream substrate.</p>
+      <span class="bigmath">
+        <span class="from">O(upstream × downstream)</span>
+        <span style="color:var(--faint)">collapses to</span>
+        <span class="to">O(upstream + downstream)</span>
+      </span>
+      <p style="margin:14px 0 0">Upstream systems create or reference envelopes; downstream substrates implement the state and validation semantics behind the cursor.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- SOLUTION -->
+<section id="solution">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">The Solution</div>
+      <h2>An envelope is a written cursor — not a recomputed predicate.</h2>
+      <p>
+        An aggregate bound can be a predicate re-checked from public state, or a counter each action advances.
+        Across protocols they are not equivalent: no single contract holds the sum, so only a shared, written
+        cursor can hold it.
+      </p>
+    </div>
+
+    <div class="grid c3">
+      <div class="card">
+        <div class="lead-num">01</div>
+        <div class="ico">∑</div>
+        <h3>Meters authority, not calls</h3>
+        <p>An envelope records how much of a bounded mandate an agent has consumed across all actions — where no single protocol maintains the aggregate.</p>
+      </div>
+      <div class="card">
+        <div class="lead-num">02</div>
+        <div class="ico">✎</div>
+        <h3>A write supplies the order</h3>
+        <p><code>advanceCursor</code> records against one object, so two concurrent draws cannot both pass a bound their sum would exceed. A read cannot reproduce that serialization across surfaces.</p>
+      </div>
+      <div class="card">
+        <div class="lead-num">03</div>
+        <div class="ico">◎</div>
+        <h3>Auditable by anyone</h3>
+        <p>The public <code>EnvelopeAdvanced</code> log lets any party recompute whether cumulative consumption ever exceeded the cap — with no trust in the registry.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="border-left-color: var(--accent-2)">
+      <p style="margin:0"><b>A narrow docking surface, not a substrate.</b> The interface defines seven functions and three events. It deliberately omits capability issuance, intent submission, execution routing, and auditing. Different implementations compete on cursor semantics, proof systems, invariants, and trust assumptions while exposing the same surface.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- CONCEPTS -->
+<section id="concepts">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Concepts</div>
+      <h2>Four pieces: envelope, reference, substrate, registry.</h2>
+      <p>Two terms carry the weight — the <b>cursor</b>, the advancing aggregate-state commitment, and the <b>substrate</b>, the implementation that maintains and validates it.</p>
+    </div>
+
+    <div class="grid c2">
+      <div class="card">
+        <div class="ico">✉</div>
+        <h3>Envelope</h3>
+        <p>An on-chain record a principal registers at the start of a bounded course of action: an id, a principal, an immutable <code>capabilityRoot</code>, a mutable <code>cursorRoot</code>, an expiry, and lifecycle status. Identified on-chain by the pair <code>(registry, id)</code>.</p>
+      </div>
+      <div class="card">
+        <div class="ico">↗</div>
+        <h3>Envelope reference</h3>
+        <p>A conceptual interoperability type — <code>(chainId, registry, id)</code> — that can be passed across applications and chains, letting many consumers query and update the same registry-maintained state.</p>
+      </div>
+      <div class="card">
+        <div class="ico">▨</div>
+        <h3>Substrate</h3>
+        <p>The contract system that maintains the state a cursor commits to and validates cursor advances. A budget substrate tracks spend; identity, reputation, privacy, and contestation substrates maintain their own invariants.</p>
+      </div>
+      <div class="card">
+        <div class="ico">▤</div>
+        <h3>Registry</h3>
+        <p>A substrate-specific contract that stores envelopes and implements <code>IBoundedAgentAction</code>. Its address identifies both the envelope namespace and the implementation responsible for validating cursor transitions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- INTERFACE -->
+<section id="interface">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">The Interface</div>
+      <h2>Seven functions. Three events. One state machine.</h2>
+      <p>A conforming implementation MUST implement <code>IBoundedAgentAction</code> and support ERC-165 discovery. The cursor representation, witness format, and enforced invariant are left to the substrate.</p>
+    </div>
+
+    <div class="code-split">
+      <div class="codeblock">
+        <div class="code-head">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <span class="fname">IBoundedAgentAction.sol</span>
+        </div>
+<pre class="code"><span class="tok-com">// SPDX-License-Identifier: CC0-1.0</span>
+<span class="tok-key">interface</span> <span class="tok-type">IBoundedAgentAction</span> <span class="tok-key">is</span> <span class="tok-type">IERC165</span> {
+  <span class="tok-key">enum</span> <span class="tok-type">Status</span> {
+    None, Active, Completed,
+    Contested, Revoked, Expired
+  }
+
+  <span class="tok-key">struct</span> <span class="tok-type">Envelope</span> {
+    <span class="tok-type">bytes32</span> id;
+    <span class="tok-type">address</span> principal;
+    <span class="tok-type">bytes32</span> capabilityRoot;  <span class="tok-com">// fixed</span>
+    <span class="tok-type">bytes32</span> cursorRoot;      <span class="tok-com">// advances</span>
+    <span class="tok-type">uint64</span>  createdAt;
+    <span class="tok-type">uint64</span>  expiresAt;
+    <span class="tok-type">Status</span>  status;
+  }
+
+  <span class="tok-com">// — reads (side-effect free) —</span>
+  <span class="tok-key">function</span> <span class="tok-fn">getEnvelope</span>(<span class="tok-type">bytes32</span> id)
+    <span class="tok-key">external view returns</span> (<span class="tok-type">Envelope</span> <span class="tok-key">memory</span>);
+  <span class="tok-key">function</span> <span class="tok-fn">getCursor</span>(<span class="tok-type">bytes32</span> id)
+    <span class="tok-key">external view returns</span> (<span class="tok-type">bytes32</span>);
+  <span class="tok-key">function</span> <span class="tok-fn">isActive</span>(<span class="tok-type">bytes32</span> id)
+    <span class="tok-key">external view returns</span> (<span class="tok-type">bool</span>);
+
+  <span class="tok-com">// — writes —</span>
+  <span class="tok-key">function</span> <span class="tok-fn">registerEnvelope</span>(
+    <span class="tok-type">address</span> principal,
+    <span class="tok-type">bytes32</span> capabilityRoot,
+    <span class="tok-type">uint64</span>  expiresAt,
+    <span class="tok-type">bytes</span> <span class="tok-key">calldata</span> initData
+  ) <span class="tok-key">external returns</span> (<span class="tok-type">bytes32</span> id);
+
+  <span class="tok-key">function</span> <span class="tok-fn">advanceCursor</span>(
+    <span class="tok-type">bytes32</span> id,
+    <span class="tok-type">bytes</span> <span class="tok-key">calldata</span> witness
+  ) <span class="tok-key">external returns</span> (<span class="tok-type">bytes32</span> newCursor);
+
+  <span class="tok-key">function</span> <span class="tok-fn">setStatus</span>(<span class="tok-type">bytes32</span> id, <span class="tok-type">Status</span> s)
+    <span class="tok-key">external</span>;
+}</pre>
+      </div>
+
+      <div class="feature-list">
+        <div class="fi">
+          <span class="n">✎</span>
+          <div>
+            <h4>registerEnvelope</h4>
+            <p>Creates a unique envelope with status <code>Active</code>. If the principal is not the caller, the implementation MUST verify authorization (EIP-712, ERC-1271, or an upstream grant) and revert otherwise.</p>
+          </div>
+        </div>
+        <div class="fi">
+          <span class="n">→</span>
+          <div>
+            <h4>advanceCursor</h4>
+            <p>Atomic with the substrate state it represents. Rejects non-Active or expired envelopes. Validates an opaque <code>witness</code> bound to at least <code>(id, prevCursor)</code> so it cannot be replayed. Never open to arbitrary callers.</p>
+          </div>
+        </div>
+        <div class="fi">
+          <span class="n">◎</span>
+          <div>
+            <h4>getCursor · isActive</h4>
+            <p>Reads that fold expiry into their result: a stored <code>Active</code> status on an expired envelope cannot mislead a consumer. Unknown ids MUST revert, never return a zero value.</p>
+          </div>
+        </div>
+        <div class="fi">
+          <span class="n">⇄</span>
+          <div>
+            <h4>setStatus</h4>
+            <p>Transitions follow the lifecycle state machine and emit <code>EnvelopeStatusChanged</code>. The metered party MUST NOT be able to move an envelope out of <code>Active</code> to escape an unmet bound.</p>
+          </div>
+        </div>
+        <div class="fi">
+          <span class="n">⟟</span>
+          <div>
+            <h4>ERC-165 discovery</h4>
+            <p><code>0x3985961d</code> for the base interface, <code>0x021ca455</code> for the Budget Substrate, <code>0xe664d441</code> for the Contestable extension. A consumer confirms a named profile before interpreting a cursor it did not define.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- LIFECYCLE -->
+<section id="lifecycle">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Lifecycle</div>
+      <h2>A shared status vocabulary every consumer can reason about.</h2>
+      <p>All transitions below are valid; every other transition MUST be rejected. <b>Completed</b>, <b>Revoked</b>, and <b>Expired</b> are terminal.</p>
+    </div>
+
+    <div class="lifecycle">
+      <span class="state active">Active</span>
+      <span class="lc-arrow">→</span>
+      <span class="state terminal">Completed</span>
+      <span class="lc-arrow">·</span>
+      <span class="state contested">Contested</span>
+      <span class="lc-arrow">→</span>
+      <span class="state terminal">Revoked</span>
+      <span class="lc-arrow">·</span>
+      <span class="state terminal">Expired</span>
+    </div>
+
+    <div class="callout" style="margin-top:36px">
+      <p style="margin:0"><b>Contested</b> is an optional lane. <code>Active → Contested → Active | Revoked</code> is provided by the <code>IContestableEnvelope</code> extension, discoverable via ERC-165. A base registry preserves the <code>Contested</code> enum value for vocabulary uniformity but need not enter it. Consumers MUST treat an envelope as inactive once <code>expiresAt</code> is reached, regardless of stored status.</p>
+    </div>
+
+    <div class="lc-legend">
+      <span><i style="background:var(--accent)"></i>Active — the only state that advances</span>
+      <span><i style="background:var(--accent-warm)"></i>Contested — optional dispute lane</span>
+      <span><i style="background:var(--faint)"></i>Terminal — no transitions out</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- COMPOSABILITY -->
+<section id="composability">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Composability</div>
+      <h2>Docks with the standards already shipping.</h2>
+      <p>Carry the registry address together with the envelope id — and use <code>(chainId, registry, id)</code> when the reference may leave the current chain context. Non-normative integration patterns:</p>
+    </div>
+
+    <div class="compo-grid">
+      <div class="compo"><span class="tier">Final</span><div class="std">ERC-7710</div><p>A caveat enforcer carries a reference in its terms and advances the cursor in its afterHook — only when execution actually occurs.</p></div>
+      <div class="compo"><span class="tier">Final</span><div class="std">ERC-7715</div><p>A wallet returns an envelope reference as opaque permission context; a dApp queries the registry before exercising it.</p></div>
+      <div class="compo"><span class="tier">Final</span><div class="std">ERC-4337</div><p>A paymaster gates aggregate budget, rejecting operations against inactive or exhausted envelopes. Reading a cursor in validation requires staking.</p></div>
+      <div class="compo"><span class="tier">Final</span><div class="std">ERC-7579</div><p>A modular smart account installs a module that queries or advances an envelope during execution — as a consumer, not an author of cursor semantics.</p></div>
+      <div class="compo"><span class="tier">Final</span><div class="std">ERC-7521</div><p>An intent flow carries the reference as bounded-action context; solvers query and advance the cursor as part of atomic settlement.</p></div>
+      <div class="compo"><span class="tier">Draft</span><div class="std">ERC-8211</div><p>A fetcher or batch step queries <code>getCursor</code> for aggregate state used across a composed execution flow.</p></div>
+      <div class="compo"><span class="tier">Draft</span><div class="std">ERC-8004</div><p>A registration or validation request associates agent identity or validation activity with substrate-maintained state.</p></div>
+      <div class="compo"><span class="tier">Draft</span><div class="std">ERC-8274</div><p>An inference-proof verification result becomes the witness for <code>advanceCursor</code>: per-action verification, aggregate metering.</p></div>
+      <div class="compo"><span class="tier">HTTP</span><div class="std">x402</div><p>An integration includes an envelope reference in an implementation-defined HTTP field to bind a payment request to an aggregate budget.</p></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- BUDGET PROFILE -->
+<section id="budget">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Budget Substrate Profile</div>
+      <h2>One concrete substrate, so the interface is not vacuous.</h2>
+      <p>Normative for any registry that advertises the budget profile. It makes a <code>getCursor</code> read mean the same thing — remaining headroom — in every conforming registry.</p>
+    </div>
+
+    <div class="code-split">
+      <div class="codeblock">
+        <div class="code-head">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <span class="fname">IBudgetSubstrate.sol</span>
+        </div>
+<pre class="code"><span class="tok-key">interface</span> <span class="tok-type">IBudgetSubstrate</span> <span class="tok-key">is</span> <span class="tok-type">IBoundedAgentAction</span> {
+  <span class="tok-com">// capabilityRoot = keccak256(cap, asset)</span>
+  <span class="tok-key">function</span> <span class="tok-fn">bound</span>(<span class="tok-type">bytes32</span> id)
+    <span class="tok-key">external view returns</span> (<span class="tok-type">uint256</span> cap, <span class="tok-type">address</span> asset);
+
+  <span class="tok-com">// cursorRoot = keccak256(spent)</span>
+  <span class="tok-key">function</span> <span class="tok-fn">spent</span>(<span class="tok-type">bytes32</span> id)
+    <span class="tok-key">external view returns</span> (<span class="tok-type">uint256</span>);
+
+  <span class="tok-com">// cap - spent, or 0 if not active</span>
+  <span class="tok-key">function</span> <span class="tok-fn">remaining</span>(<span class="tok-type">bytes32</span> id)
+    <span class="tok-key">external view returns</span> (<span class="tok-type">uint256</span>);
+}</pre>
+      </div>
+      <div class="feature-list">
+        <div class="fi"><span class="n">≤</span><div><h4>spent + amount ≤ cap</h4><p>The witness is <code>abi.encode(amount, authorization)</code>. <code>advanceCursor</code> rejects the advance unless it stays within the cap, then sets <code>spent</code> to <code>spent + amount</code> and recomputes the cursor.</p></div></div>
+        <div class="fi"><span class="n">↑</span><div><h4>Monotonic &amp; bounded</h4><p>A budget registry MUST maintain <code>spent ≤ cap</code> while Active, and <code>spent</code> MUST be monotonically non-decreasing — the interoperable guarantee consumers rely on.</p></div></div>
+        <div class="fi"><span class="n">=</span><div><h4>Typed &amp; committed agree</h4><p><code>keccak256(cap − remaining(id))</code> MUST equal <code>getCursor(id)</code> while Active — the accessor and the commitment cannot diverge.</p></div></div>
+        <div class="fi"><span class="n">∅</span><div><h4>Zero is ambiguous</h4><p>A <code>remaining</code> of zero denotes either an exhausted bound or an inactive envelope; a consumer MUST consult <code>isActive</code> to tell them apart.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- SECURITY -->
+<section id="security">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Security Considerations</div>
+      <h2>The interface meters; it does not enforce.</h2>
+      <p>Non-bypassability is a property a <em>substrate</em> establishes — by owning the assets or gating the account's only execution path — not a guarantee of the interface itself.</p>
+    </div>
+
+    <div class="sec-grid">
+      <div class="sec"><h4>Enforcement is a substrate property <span class="m">MUST</span></h4><p>Absent a binding mechanism the cursor is advisory. Consumers MUST NOT treat an un-advanced cursor as evidence of remaining authority unless settlement is gated on the advance.</p></div>
+      <div class="sec"><h4>Atomicity <span class="m">MUST</span></h4><p><code>advanceCursor</code> must be atomic with the substrate state changes the witness represents, or reentrancy and partial updates can violate the invariant.</p></div>
+      <div class="sec"><h4>Unauthorized advancement <span class="m">MUST</span></h4><p>Because an advance consumes headroom, advancement must bind to a validated witness or pre-authorized consumer — never open to arbitrary callers, or an attacker can exhaust a principal's mandate.</p></div>
+      <div class="sec"><h4>Witness validity <span class="m">MUST</span></h4><p>Implementations must validate witnesses before changing state. Invalid witnesses must revert without side effects, and must bind to <code>(id, prevCursor)</code> against replay.</p></div>
+      <div class="sec"><h4>Ordering &amp; backdating <span class="m">MUST</span></h4><p>Ordering claims anchor to the on-chain time an advance was recorded, not a timestamp the agent supplies — an agent-supplied time can be backdated.</p></div>
+      <div class="sec"><h4>Cross-chain composition <span class="m">SHOULD</span></h4><p>A global bound may be partitioned into independent per-chain envelopes whose caps sum to the bound. A single live bound synchronized across chains is out of scope.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section>
+  <div class="wrap">
+    <div class="cta">
+      <h2>Help shape the standard.</h2>
+      <p>ERC-8312 is a Draft. Read the specification, review the reference implementation, and share feedback on Ethereum Magicians.</p>
+      <div class="cta-btns">
+        <a class="btn solid" href="https://ethereum-magicians.org/t/erc-8312-bounded-agent-actions/28851" target="_blank" rel="noopener">Join the discussion →</a>
+        <a class="btn ghost" href="https://github.com/Atlas-Protocol-AI/bounded-agent-actions" target="_blank" rel="noopener">Reference implementation ↗</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <a class="brand" href="#top">
+          <span class="dot">◈</span>
+          <span>ERC-8312</span>
+        </a>
+        <p>Bounded Agent Actions — on-chain records that bind agent intent to a verifiable state cursor across calls and across protocols.</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-col">
+          <h5>Specification</h5>
+          <a href="https://ethereum-magicians.org/t/erc-8312-bounded-agent-actions/28851" target="_blank" rel="noopener">Discussion (Ethereum Magicians)</a>
+          <a href="https://github.com/Atlas-Protocol-AI/bounded-agent-actions" target="_blank" rel="noopener">Reference implementation</a>
+          <a href="#interface">The interface</a>
+          <a href="#budget">Budget profile</a>
+        </div>
+        <div class="foot-col">
+          <h5>Related</h5>
+          <a href="https://eips.ethereum.org/EIPS/eip-165" target="_blank" rel="noopener">ERC-165</a>
+          <a href="https://eips.ethereum.org/EIPS/eip-4337" target="_blank" rel="noopener">ERC-4337</a>
+          <a href="https://eips.ethereum.org/EIPS/eip-7710" target="_blank" rel="noopener">ERC-7710</a>
+          <a href="https://www.erc8211.com" target="_blank" rel="noopener">ERC-8211</a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>Copyright and related rights waived via <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener" style="color:var(--muted)">CC0</a>.</span>
+      <span>Authors: Matthias Hauser (@0x2kNJ) · Simon Brown (@orbmis)</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Close mobile menu when a link is tapped
+  document.querySelectorAll('#navlinks a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      document.getElementById('navlinks').classList.remove('open');
+    });
+  });
+
+  // Theme toggle
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var root = document.documentElement;
+    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('erc8312-theme', next); } catch (e) {}
+  });
+</script>
+</body>
+</html>
