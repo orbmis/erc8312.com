@@ -258,19 +258,6 @@
   .feature-list .fi h4 { font-size: 1rem; margin-bottom: 3px; }
   .feature-list .fi p { color: var(--muted); font-size: .9rem; margin: 0; }
 
-  /* Lifecycle state machine */
-  .lifecycle { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: center; margin-top: 8px; }
-  .state {
-    font-family: var(--mono); font-size: .85rem; padding: 9px 16px; border-radius: 999px;
-    border: 1px solid var(--border-2); background: var(--panel); color: var(--text);
-  }
-  .state.active { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px rgba(124,140,255,.25) inset; }
-  .state.terminal { color: var(--faint); }
-  .state.contested { border-color: var(--accent-warm); color: var(--accent-warm); }
-  .lc-arrow { color: var(--faint); font-family: var(--mono); }
-  .lc-legend { display: flex; gap: 20px; justify-content: center; margin-top: 26px; flex-wrap: wrap; color: var(--faint); font-size: .82rem; }
-  .lc-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 7px; vertical-align: middle; }
-
   /* Composability chips */
   .compo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .compo {
@@ -343,7 +330,6 @@
         <a href="#solution">Solution</a>
         <a href="#concepts">Concepts</a>
         <a href="#interface">Interface</a>
-        <a href="#lifecycle">Lifecycle</a>
         <a href="#composability">Composability</a>
         <a href="#security">Security</a>
         <a class="btn" href="https://ethereum-magicians.org/t/erc-8312-bounded-agent-actions/28851" target="_blank" rel="noopener">Read the spec →</a>
@@ -457,8 +443,8 @@
       <h2>An envelope is a written cursor — not a recomputed predicate.</h2>
       <p>
         An aggregate bound can be a predicate re-checked from public state, or a counter each action advances.
-        Across protocols they are not equivalent: no single contract holds the sum, so only a shared, written
-        cursor can hold it.
+        A protocol using ERC-8312 can even allow two or more agents to co-create mutual delegation logic,
+        moving the delegation logic to the asset itself, and away from any one specific account.
       </p>
     </div>
 
@@ -504,17 +490,17 @@
       <div class="card">
         <div class="ico">✉</div>
         <h3>Envelope</h3>
-        <p>An on-chain record a principal registers at the start of a bounded course of action: an id, a principal, an immutable <code>capabilityRoot</code>, a mutable <code>cursorRoot</code>, an expiry, and lifecycle status. Identified on-chain by the pair <code>(registry, id)</code>.</p>
+        <p>An on-chain record a principal registers at the start of a bounded course of action: an id, a principal, an immutable <code>capabilityRoot</code>, a mutable <code>cursorRoot</code>, an expiry, and lifecycle status.</p>
       </div>
       <div class="card">
         <div class="ico">↗</div>
         <h3>Envelope reference</h3>
-        <p>A conceptual interoperability type — <code>(chainId, registry, id)</code> — that can be passed across applications and chains, letting many consumers query and update the same registry-maintained state.</p>
+        <p>A interoperability type — <code>(chainId, registry, id)</code> — that can be passed across applications and chains, letting many consumers query and update the same registry-maintained state.</p>
       </div>
       <div class="card">
         <div class="ico">▨</div>
         <h3>Substrate</h3>
-        <p>The contract system that maintains the state a cursor commits to and validates cursor advances. A budget substrate tracks spend; identity, reputation, privacy, and contestation substrates maintain their own invariants.</p>
+        <p>The contract system that maintains the state a cursor commits to and validates cursor advances. A budget substrate tracks spend; identity, reputation, privacy, and contestation substrates maintain their own invariants. Anyone can create a substrate.</p>
       </div>
       <div class="card">
         <div class="ico">▤</div>
@@ -622,41 +608,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider" />
-
-<!-- LIFECYCLE -->
-<section id="lifecycle">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="kicker">Lifecycle</div>
-      <h2>A shared status vocabulary every consumer can reason about.</h2>
-      <p>All transitions below are valid; every other transition MUST be rejected. <b>Completed</b>, <b>Revoked</b>, and <b>Expired</b> are terminal.</p>
-    </div>
-
-    <div class="lifecycle">
-      <span class="state active">Active</span>
-      <span class="lc-arrow">→</span>
-      <span class="state terminal">Completed</span>
-      <span class="lc-arrow">·</span>
-      <span class="state contested">Contested</span>
-      <span class="lc-arrow">→</span>
-      <span class="state terminal">Revoked</span>
-      <span class="lc-arrow">·</span>
-      <span class="state terminal">Expired</span>
-    </div>
-
-    <div class="callout" style="margin-top:36px">
-      <p style="margin:0"><b>Contested</b> is an optional lane. <code>Active → Contested → Active | Revoked</code> is provided by the <code>IContestableEnvelope</code> extension, discoverable via ERC-165. A base registry preserves the <code>Contested</code> enum value for vocabulary uniformity but need not enter it. Consumers MUST treat an envelope as inactive once <code>expiresAt</code> is reached, regardless of stored status.</p>
-    </div>
-
-    <div class="lc-legend">
-      <span><i style="background:var(--accent)"></i>Active — the only state that advances</span>
-      <span><i style="background:var(--accent-warm)"></i>Contested — optional dispute lane</span>
-      <span><i style="background:var(--faint)"></i>Terminal — no transitions out</span>
     </div>
   </div>
 </section>
