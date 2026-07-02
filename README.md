@@ -1,4 +1,4 @@
-# ERC-8312 — Bounded Agent Actions
+# Website for ERC-8312 — Bounded Agent Actions
 
 The website for **[ERC-8312: Bounded Agent Actions](https://github.com/0x2kNJ/ERCs/blob/7678357d01a787b7d99ae277ad0cadf44e1beabc/ERCS/erc-8312.md)** — a proposed Ethereum standard for on-chain *envelopes* that bind agent intent to a verifiable state cursor across calls and across protocols.
 
