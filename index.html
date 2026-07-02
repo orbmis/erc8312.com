@@ -269,13 +269,6 @@
   .compo p { color: var(--muted); font-size: .86rem; margin: 8px 0 0; }
   .compo .tier { font-size: .68rem; font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); float: right; }
 
-  /* Security list */
-  .sec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-  .sec { border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; background: var(--panel); }
-  .sec h4 { font-size: .98rem; margin-bottom: 7px; display: flex; align-items: center; gap: 9px; }
-  .sec h4 .m { font-family: var(--mono); font-size: .68rem; color: var(--red); border: 1px solid rgba(249,112,102,.35); border-radius: 6px; padding: 1px 7px; letter-spacing: .05em; }
-  .sec p { color: var(--muted); font-size: .88rem; margin: 0; }
-
   /* CTA */
   .cta {
     text-align: center; border: 1px solid var(--border); border-radius: 22px; padding: 60px 30px;
@@ -307,7 +300,7 @@
     .nav-toggle { display: block; }
     .zones { grid-template-columns: 1fr; }
     .zone-mid .arrow { transform: rotate(90deg); }
-    .grid.c2, .grid.c3, .grid.c4, .compo-grid, .sec-grid, .prob-cols { grid-template-columns: 1fr; }
+    .grid.c2, .grid.c3, .grid.c4, .compo-grid, .prob-cols { grid-template-columns: 1fr; }
     .code-split { grid-template-columns: 1fr; }
   }
   @media (min-width: 901px) and (max-width: 1024px) {
@@ -331,7 +324,6 @@
         <a href="#concepts">Concepts</a>
         <a href="#interface">Interface</a>
         <a href="#composability">Composability</a>
-        <a href="#security">Security</a>
         <a class="btn" href="https://ethereum-magicians.org/t/erc-8312-bounded-agent-actions/28851" target="_blank" rel="noopener">Read the spec →</a>
       </nav>
       <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme" title="Toggle theme">
@@ -674,28 +666,6 @@
         <div class="fi"><span class="n">=</span><div><h4>Typed &amp; committed agree</h4><p><code>keccak256(cap − remaining(id))</code> MUST equal <code>getCursor(id)</code> while Active — the accessor and the commitment cannot diverge.</p></div></div>
         <div class="fi"><span class="n">∅</span><div><h4>Zero is ambiguous</h4><p>A <code>remaining</code> of zero denotes either an exhausted bound or an inactive envelope; a consumer MUST consult <code>isActive</code> to tell them apart.</p></div></div>
       </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider" />
-
-<!-- SECURITY -->
-<section id="security">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="kicker">Security Considerations</div>
-      <h2>The interface meters; it does not enforce.</h2>
-      <p>Non-bypassability is a property a <em>substrate</em> establishes — by owning the assets or gating the account's only execution path — not a guarantee of the interface itself.</p>
-    </div>
-
-    <div class="sec-grid">
-      <div class="sec"><h4>Enforcement is a substrate property <span class="m">MUST</span></h4><p>Absent a binding mechanism the cursor is advisory. Consumers MUST NOT treat an un-advanced cursor as evidence of remaining authority unless settlement is gated on the advance.</p></div>
-      <div class="sec"><h4>Atomicity <span class="m">MUST</span></h4><p><code>advanceCursor</code> must be atomic with the substrate state changes the witness represents, or reentrancy and partial updates can violate the invariant.</p></div>
-      <div class="sec"><h4>Unauthorized advancement <span class="m">MUST</span></h4><p>Because an advance consumes headroom, advancement must bind to a validated witness or pre-authorized consumer — never open to arbitrary callers, or an attacker can exhaust a principal's mandate.</p></div>
-      <div class="sec"><h4>Witness validity <span class="m">MUST</span></h4><p>Implementations must validate witnesses before changing state. Invalid witnesses must revert without side effects, and must bind to <code>(id, prevCursor)</code> against replay.</p></div>
-      <div class="sec"><h4>Ordering &amp; backdating <span class="m">MUST</span></h4><p>Ordering claims anchor to the on-chain time an advance was recorded, not a timestamp the agent supplies — an agent-supplied time can be backdated.</p></div>
-      <div class="sec"><h4>Cross-chain composition <span class="m">SHOULD</span></h4><p>A global bound may be partitioned into independent per-chain envelopes whose caps sum to the bound. A single live bound synchronized across chains is out of scope.</p></div>
     </div>
   </div>
 </section>
