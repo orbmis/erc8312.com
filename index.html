@@ -373,7 +373,7 @@
       </p>
       <p>
         ERC-8312 is delegation for the modern era: it allows agents to be maximally autonomous while maintaining robust guardrails,
-        acting as a single, shared substrate that connects upstream standards to downstream protocols in a way that maintains
+        acting as a single, shared object that connects upstream standards to downstream protocols in a way that maintains
         an agent's bounds over time.
       </p>
     </div>
@@ -462,7 +462,7 @@
     </div>
 
     <div class="callout" style="border-left-color: var(--accent-2)">
-      <p style="margin:0"><b>A narrow docking surface, not a substrate.</b> The interface defines seven functions and three events. It deliberately omits capability issuance, intent submission, execution routing, and auditing. Different implementations compete on cursor semantics, proof systems, invariants, and trust assumptions while exposing the same surface.</p>
+      <p style="margin:0"><b>A substrate-neutral bounded-authority state machine.</b> The interface defines seven functions and three events. It deliberately omits capability issuance, intent submission, execution routing, and auditing. Different implementations compete on cursor semantics, proof systems, invariants, and trust assumptions while exposing the same surface.</p>
     </div>
   </div>
 </section>
@@ -606,6 +606,48 @@
 
 <hr class="divider" />
 
+<!-- ENFORCEMENT -->
+<section id="enforcement">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Enforcement Model</div>
+      <h2>Metering is the interface. Non-bypassability is the substrate.</h2>
+      <p>
+        The cursor orders and records what an agent consumes across surfaces. Forcing every value-moving
+        action through it — the property that makes a bound binding — is a substrate obligation, not a
+        guarantee of the interface itself.
+      </p>
+    </div>
+
+    <div class="grid c3">
+      <div class="card">
+        <div class="lead-num">01</div>
+        <div class="ico">⊘</div>
+        <h3>Meters, does not enforce</h3>
+        <p>The interface records consumption. A substrate makes the bound non-bypassable — by owning the assets or gating the account's only execution path. Absent that binding, the cursor is advisory.</p>
+      </div>
+      <div class="card">
+        <div class="lead-num">02</div>
+        <div class="ico">⇥</div>
+        <h3>Advancement is never open</h3>
+        <p><code>advanceCursor</code> binds to a validated witness or a pre-authorized consumer and never advances for an arbitrary caller — otherwise any party could exhaust a principal's mandate without acting.</p>
+      </div>
+      <div class="card">
+        <div class="lead-num">03</div>
+        <div class="ico">⊗</div>
+        <h3>No exit from an unmet bound</h3>
+        <p>The metered party cannot move an envelope out of <code>Active</code> to escape a bound; terminal states are final; reads fold in expiry, so a stale <code>Active</code> cannot mislead a consumer.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="border-left-color: var(--accent-2)">
+      <p style="margin:0"><b>Ordering and non-bypassability are distinct.</b> The write orders the advances that pass through it — the serialization that holds the aggregate across surfaces. Forcing every value-moving action to pass through an advance is the substrate's responsibility: a correct cursor holds the sum of the draws it sees.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
 <!-- COMPOSABILITY -->
 <section id="composability">
   <div class="wrap">
@@ -637,7 +679,7 @@
     <div class="section-head">
       <div class="kicker">Budget Substrate Profile</div>
       <h2>A ready-made budget substrate you can implement today.</h2>
-      <p>Any registry that advertises the budget profile must follow it. That way, reading the cursor always means the same thing — how much of the agent's spending limit is left — no matter which registry you ask.</p>
+      <p>Budget is the reference profile — one substrate, not the whole standard. Any registry that advertises it must follow it, so reading the cursor always means the same thing, no matter which registry you ask — how much of the agent's spending limit is left. Identity, reputation, privacy, and contestation substrates advertise their own profiles behind the same interface.</p>
     </div>
 
     <div class="code-split">
